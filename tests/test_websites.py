@@ -119,3 +119,35 @@ def test_brand_domain_accepted_when_impressum_names_legal_entity(fake_fetcher):
     # but a random site that merely mentions the name is not accepted
     pages = {"https://www.blog.de/": "<p>Heute über SSI Schäfer</p>"}
     assert verify_site(fake_fetcher(pages), "https://www.blog.de/", "SSI Schäfer", None) is None
+
+
+def test_guess_skips_generic_first_word():
+    urls = guess_domains("Stadt Würzburg")
+    assert "https://www.wuerzburg.de/" in urls
+    assert "https://www.stadt.de/" not in urls
+
+
+def test_brand_domain_with_unfindable_impressum(fake_fetcher):
+    # warema.de redirects to warema.com/de/, the Impressum isn't linked as "Impressum"
+    pages = {"https://www.warema.com/de/": "<footer>© WAREMA Renkhoff SE · Sonnenschutz</footer>"}
+    fetcher = fake_fetcher(pages, redirects={"https://www.warema.de/": "https://www.warema.com/de/"})
+    assert verify_site(fetcher, "https://www.warema.de/", "Warema Renkhoff SE", "97828") == "https://www.warema.com/"
+    # First-word domain without the full name on the page is not enough
+    pages = {"https://www.warema.com/de/": "<p>Warema</p>"}
+    fetcher = fake_fetcher(pages, redirects={"https://www.warema.de/": "https://www.warema.com/de/"})
+    assert verify_site(fetcher, "https://www.warema.de/", "Warema Renkhoff SE", "97828") is None
+
+
+def test_impressum_found_by_legal_notice_link_or_relative_path(fake_fetcher):
+    pages = {
+        "https://www.muster.de/en/": '<a href="/en/legal-notice">Legal notice</a>',
+        "https://www.muster.de/en/legal-notice": "<p>Muster Antriebstechnik GmbH</p>",
+    }
+    fetcher = fake_fetcher(pages, redirects={"https://www.muster.de/": "https://www.muster.de/en/"})
+    assert verify_site(fetcher, "https://www.muster.de/", "Muster Antriebstechnik GmbH", None) == "https://www.muster.de/"
+    pages = {
+        "https://www.muster.de/de/": "<p>Willkommen</p>",
+        "https://www.muster.de/de/impressum": "<p>Muster Antriebstechnik GmbH</p>",
+    }
+    fetcher = fake_fetcher(pages, redirects={"https://www.muster.de/": "https://www.muster.de/de/"})
+    assert verify_site(fetcher, "https://www.muster.de/", "Muster Antriebstechnik GmbH", None) == "https://www.muster.de/"

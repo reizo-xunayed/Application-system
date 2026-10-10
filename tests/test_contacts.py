@@ -110,3 +110,13 @@ def test_random_department_addresses_are_not_used():
     assert score_email("info@gmx.de", "muster.de") >= MIN_SCORE  # small firms often use GMX/T-Online
     assert score_email("a.schmidt@muster.de", "muster.de", career_page=True) >= MIN_SCORE
     assert score_email("a.schmidt@muster.de", "muster.de", from_listing=True) >= MIN_SCORE
+
+
+def test_career_pages_matched_by_whole_words():
+    assert contacts.is_career_url("https://www.muster.de/karriere/ausbildung")
+    assert contacts.is_career_url("https://karriere.muster.de/")
+    assert contacts.is_career_url("https://www.muster.de/de/bewerbung-online")
+    # "Wettbewerb" (competition) is not "Bewerbung"
+    assert not contacts.is_career_url("https://www.deutschebahn.com/de/konzern/Wettbewerb/verkehr_politik-6879650")
+    assert contacts._link_score("https://www.muster.de/ueber-uns", "Über uns") == 3
+    assert contacts._link_score("https://www.muster.de/legal-notice", "") == 9

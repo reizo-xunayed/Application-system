@@ -21,13 +21,13 @@ def test_draft_uses_listing_and_custom_override():
         cid = add_company(conn, name="Muster IT GmbH", city="München")
         conn.execute(
             "INSERT INTO listings(company_id, refnr, title, occupation, occupation_key, city, published, created_at) "
-            "VALUES (?, 'r1', 't', 'Fachinformatiker/in - Anwendungsentwicklung', 'it', 'Garching', '2026-09-01', ?)",
+            "VALUES (?, 'r1', 't', 'Fachinformatiker/in - Anwendungsentwicklung', 'it', 'Garching b. München, Oberbayern', '2026-09-01', ?)",
             (cid, db.now()),
         )
         settings = dict(db.get_settings(conn), subject_template="Ausbildung als {beruf}", body_template="An {firma} in {stadt}")
         company = conn.execute("SELECT * FROM companies WHERE id = ?", (cid,)).fetchone()
         assert mailer.draft_for(conn, company, settings) == (
-            "Ausbildung als Fachinformatiker/in für Anwendungsentwicklung", "An Muster IT GmbH in Garching", False)
+            "Ausbildung als Fachinformatiker/in für Anwendungsentwicklung", "An Muster IT GmbH in Garching b. München", False)
         conn.execute("INSERT INTO drafts(company_id, subject, body) VALUES (?, 'S', 'B')", (cid,))
         assert mailer.draft_for(conn, company, settings) == ("S", "B", True)
 

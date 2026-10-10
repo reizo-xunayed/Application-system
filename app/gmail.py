@@ -76,17 +76,28 @@ def sign_in(timeout_seconds: int = 300) -> str:
 
     if not client_file_present():
         raise GmailError(f"Missing {config.GOOGLE_CLIENT_FILE.name} in the data folder (see README, step 3).")
+    # Let us report a missing permission ourselves instead of oauthlib's "Scope has changed" error.
+    os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
     flow = InstalledAppFlow.from_client_secrets_file(str(config.GOOGLE_CLIENT_FILE), SCOPES)
-    creds = flow.run_local_server(
-        port=0,
-        open_browser=True,
-        timeout_seconds=timeout_seconds,
-        prompt="consent",
-        authorization_prompt_message="",
-        success_message="Signed in to Gmail. You can close this tab and go back to the app.",
-    )
-    if creds is None:
-        raise GmailError("Sign-in timed out. Try again.")
+    try:
+        creds = flow.run_local_server(
+            port=0,
+            open_browser=True,
+            timeout_seconds=timeout_seconds,
+            prompt="consent",
+            authorization_prompt_message="",
+            success_message="Signed in to Gmail. You can close this tab and go back to the app.",
+        )
+    except AttributeError as exc:  # google_auth_oauthlib's WSGITimeoutError
+        raise GmailError("Sign-in timed out. Click “Sign in with Google” again.") from exc
+    except Exception as exc:
+        raise GmailError(f"Google sign-in did not complete: {exc}") from exc
+    granted = set(getattr(creds, "granted_scopes", None) or SCOPES)
+    if any(scope not in granted for scope in SCOPES):
+        raise GmailError(
+            "Both permissions are needed (send email and read email to spot replies). "
+            "Sign in again and leave both boxes ticked."
+        )
     _save(creds)
     return my_address()
 

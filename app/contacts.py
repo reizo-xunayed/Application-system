@@ -57,11 +57,11 @@ TWO_LEVEL_SUFFIXES = {"co.uk", "org.uk", "com.au", "co.at", "or.at", "gv.at", "c
 CAREER_WORDS = ("ausbildung", "azubi", "nachwuchs", "karriere", "career", "jobs", "job", "stellen", "bewerb", "personal")
 LINK_SCORES: List[Tuple[Tuple[str, ...], int]] = [
     (("ausbildung", "azubi", "nachwuchs", "schueler", "schüler", "lehrstelle"), 10),
-    (("impressum", "imprint", "legal-notice"), 9),
+    (("impressum", "imprint", "legal"), 9),
     (("karriere", "career", "jobs", "stellen", "bewerb", "job"), 9),
     (("kontakt", "contact"), 8),
     (("ansprechpartner", "personal", "team"), 5),
-    (("ueber-uns", "über-uns", "about", "unternehmen", "company"), 3),
+    (("ueber", "über", "about", "unternehmen", "company"), 3),
 ]
 FALLBACK_PATHS = ("/impressum", "/kontakt", "/karriere", "/ausbildung")
 
@@ -202,9 +202,15 @@ def _keyword_hit(local: str, keywords: Iterable[str]) -> bool:
     return any((kw in local) if len(kw) >= 5 else (kw in pieces) for kw in keywords)
 
 
+def _starts_a_word(text: str, keywords: Iterable[str]) -> bool:
+    """Keyword at the start of a word: "bewerbung" matches "bewerb", "wettbewerb" does not."""
+    words = re.split(r"[^a-z0-9äöüß]+", text.lower())
+    return any(word.startswith(kw) for word in words if word for kw in keywords)
+
+
 def is_career_url(url: str) -> bool:
-    path = urlsplit(url).path.lower() + " " + (urlsplit(url).hostname or "")
-    return any(word in path for word in CAREER_WORDS)
+    parts = urlsplit(url)
+    return _starts_a_word(f"{parts.path} {parts.hostname or ''}", CAREER_WORDS)
 
 
 def score_email(email: str, site_domain: Optional[str], career_page: bool = False, from_listing: bool = False) -> Optional[int]:
@@ -248,8 +254,8 @@ def _normalize_url(url: str) -> str:
 
 
 def _link_score(url: str, text: str) -> int:
-    haystack = (urlsplit(url).path + " " + (urlsplit(url).hostname or "") + " " + text).lower()
-    return max((points for words, points in LINK_SCORES if any(w in haystack for w in words)), default=0)
+    haystack = urlsplit(url).path + " " + (urlsplit(url).hostname or "") + " " + text
+    return max((points for words, points in LINK_SCORES if _starts_a_word(haystack, words)), default=0)
 
 
 def _same_site(url: str, site: str) -> bool:

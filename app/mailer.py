@@ -40,10 +40,11 @@ def main_listing(conn: sqlite3.Connection, company_id: int) -> Optional[sqlite3.
 
 def context_for(conn: sqlite3.Connection, company: sqlite3.Row) -> dict:
     listing = main_listing(conn, company["id"])
+    city = (listing["city"] if listing and listing["city"] else company["city"]) or ""
     return {
         "firma": company["name"],
         "beruf": readable_occupation(listing["occupation"]) if listing else "",
-        "stadt": (listing["city"] if listing and listing["city"] else company["city"]) or "",
+        "stadt": city.split(",")[0].strip(),  # "Arnstein, Unterfranken" -> "Arnstein"
     }
 
 

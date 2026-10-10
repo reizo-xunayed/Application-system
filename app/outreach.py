@@ -84,11 +84,11 @@ def sent_today(conn: sqlite3.Connection) -> int:
     return conn.execute("SELECT COUNT(*) FROM emails WHERE sent_at >= ?", (since,)).fetchone()[0]
 
 
-def _send(conn_settings: dict, my_addr: str, to_addr: str, subject: str, body: str, *, attachments=(),
+def _send(settings: dict, my_addr: str, to_addr: str, subject: str, body: str, *, attachments=(),
           thread_id: Optional[str] = None, in_reply_to: Optional[str] = None) -> dict:
     token = tracking.new_token() if tracking.configured() else None
     raw = mailer.build_message(
-        conn_settings["sender_name"],
+        settings["sender_name"],
         my_addr,
         to_addr,
         subject,

@@ -36,6 +36,16 @@ NOT_COMPANY_SITES = {
     "bibb.de", "berufe.tv", "planet-beruf.de", "interamt.de", "bund.de", "berufenet.de",
 }
 
+IMPRESSUM_WORDS = (
+    "impressum", "imprint", "legal notice", "legal-notice", "site notice", "rechtliche hinweise",
+    "anbieterkennzeichnung", "corporate info",
+)
+# First words that say nothing about the company; never used alone as a domain guess.
+GENERIC_WORDS = {
+    "stadt", "gemeinde", "landkreis", "markt", "deutsche", "bayerische", "staatliches", "sparkasse",
+    "volksbank", "raiffeisenbank", "evangelische", "katholische", "bischoefl", "universitaet", "klinikum",
+}
+
 URL_RE = re.compile(r"(?:https?://|www\.)[^\s<>\"'()\[\]{}]+", re.I)
 
 Log = Callable[[str], None]
@@ -103,11 +113,14 @@ def guess_domains(company_name: str) -> List[str]:
     tokens = names.name_tokens(company_name)
     if not tokens:
         return []
+    core = [t for t in tokens if t not in GENERIC_WORDS] or tokens
     stems = ["".join(tokens), "-".join(tokens)]
-    if len(tokens) > 2:
-        stems += ["".join(tokens[:2]), "-".join(tokens[:2])]
-    if len(tokens) > 1 and len(tokens[0]) >= 4:
-        stems.append(tokens[0])
+    if core != tokens:
+        stems += ["".join(core), "-".join(core)]
+    if len(core) > 2:
+        stems += ["".join(core[:2]), "-".join(core[:2])]
+    if len(core) > 1 and len(core[0]) >= 4:
+        stems.append(core[0])
     seen, urls = set(), []
     for stem in stems:
         for tld in ("de", "com"):
@@ -125,13 +138,15 @@ def _folded_words(text: str) -> str:
     return " " + " ".join(t for t in names.fold(text).split() if t not in names.LEGAL_WORDS) + " "
 
 
-def _impressum_link(page: Page) -> Optional[str]:
+def _impressum_urls(page: Page) -> List[str]:
+    """The Impressum link if the page has one, otherwise the usual places to look."""
     soup = parse(page)
     for a in soup.find_all("a", href=True):
         label = (a.get_text(" ", strip=True) + " " + a["href"]).lower()
-        if "impressum" in label or "imprint" in label:
-            return urljoin(page.url, a["href"])
-    return None
+        if any(word in label for word in IMPRESSUM_WORDS):
+            return [urljoin(page.url, a["href"])]
+    candidates = [urljoin(page.url, "impressum"), urljoin(page.url, "/impressum"), urljoin(page.url, "/de/impressum")]
+    return list(dict.fromkeys(candidates))
 
 
 def page_mentions_company(text: str, company_name: str, plz: Optional[str] = None, require_plz: bool = False) -> bool:
@@ -154,23 +169,35 @@ def verify_site(fetcher: Fetcher, url: str, company_name: str, plz: Optional[str
         home = fetcher.get(start.replace("://www.", "://", 1))
     if not home or home.status >= 400 or not is_company_site(home.url):
         return None
-    impressum_url = _impressum_link(home) or urljoin(home.url, "/impressum")
-    impressum = fetcher.get(impressum_url)
-    if impressum and impressum.status < 400 and page_mentions_company(
-        visible_text(parse(impressum)), company_name
-    ):
-        return homepage_of(home.url)
+    for impressum_url in _impressum_urls(home):
+        impressum = fetcher.get(impressum_url)
+        if impressum and impressum.status < 400:
+            if page_mentions_company(visible_text(parse(impressum)), company_name):
+                return homepage_of(home.url)
+            break
     home_text = visible_text(parse(home))
     if page_mentions_company(home_text, company_name, plz, require_plz=True):
         return homepage_of(home.url)
-    # Brand domains whose Impressum names a different legal entity, e.g. ssi-schaefer.com:
-    # accept when the domain is exactly the company name and the homepage names it too.
-    tokens = names.name_tokens(company_name)
-    if tokens and domain_label(home.url) == "".join(tokens):
-        words = " " + names.fold(home_text) + " "
-        if all(f" {t} " in words for t in tokens):
-            return homepage_of(home.url)
+    if _brand_domain(home.url, home_text, company_name):
+        return homepage_of(home.url)
     return None
+
+
+def _brand_domain(url: str, home_text: str, company_name: str) -> bool:
+    """Domain is the company's name (warema.com for "Warema Renkhoff SE", ssi-schaefer.com for
+    "SSI Schäfer") and the homepage names the company. Covers groups whose Impressum lists
+    a different legal entity or can't be found."""
+    tokens = names.name_tokens(company_name)
+    if not tokens or tokens[0] in GENERIC_WORDS:
+        return False
+    label = domain_label(url)
+    prefixes = ["".join(tokens[:k]) for k in range(1, len(tokens) + 1)]
+    if len(label) < 4 or label not in prefixes:
+        return False
+    if page_mentions_company(home_text, company_name):
+        return True
+    words = " " + names.fold(home_text) + " "
+    return label == prefixes[-1] and all(f" {t} " in words for t in tokens)
 
 
 # ---------------------------------------------------------------- web search

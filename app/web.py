@@ -64,6 +64,10 @@ def ids_from_form() -> List[int]:
 
 
 def start_job(kind: str, title: str, fn):
+    busy = tasks.running(kind)
+    if busy:
+        flash(f"“{busy.title}” is still running. Start this again when it has finished.", "error")
+        return redirect(url_for("main.job", job_id=busy.id))
     job = tasks.start(kind, title, fn)
     return redirect(url_for("main.job", job_id=job.id))
 
