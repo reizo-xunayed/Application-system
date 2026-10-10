@@ -10,7 +10,7 @@
 </head>
 <body>
 <header>
-  <div class="brand">Ausbildung Outreach</div>
+  <div class="brand"><span class="logo">🎓</span> Ausbildung Outreach</div>
   <nav>
     {% set ep = request.endpoint or '' %}
     <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if ep == 'main.dashboard' }}">Dashboard</a>
@@ -30,5 +30,41 @@
   {% endwith %}
   {% block content %}{% endblock %}
 </main>
+
+<div class="cat-lane" aria-hidden="true">
+<div class="cat">
+  <svg viewBox="0 0 124 72" focusable="false">
+    <ellipse class="cat-shadow" cx="62" cy="68.5" rx="38" ry="3"/>
+    <path class="cat-tail" d="M92 33 C106 30 110 17 116 6"/>
+    <rect class="leg leg-a far" x="80" y="38" width="7" height="28" rx="3.5"/>
+    <rect class="leg leg-b far" x="38" y="38" width="7" height="28" rx="3.5"/>
+    <g class="cat-torso">
+      <ellipse class="fur" cx="64" cy="36" rx="31" ry="14"/>
+      <ellipse class="belly" cx="60" cy="44" rx="20" ry="5"/>
+      <path class="stripe" d="M58 23 q3 6 0 11 M68 22.5 q3 6 0 11 M78 24 q3 5 0 9.5 M87 27 q2 4 0 7"/>
+    </g>
+    <rect class="leg leg-b fur" x="88" y="38" width="7" height="28" rx="3.5"/>
+    <rect class="leg leg-a fur" x="46" y="38" width="7" height="28" rx="3.5"/>
+    <g class="cat-head">
+      <g class="cat-head-pose">
+        <g class="cat-head-bob">
+          <polygon class="fur" points="15,19 17,3 28,13"/>
+          <polygon class="fur" points="29,12 38,1 41,17"/>
+          <polygon class="ear-in" points="18,15 19,7.5 25,13"/>
+          <polygon class="ear-in" points="31.5,12 37,5 38.5,15"/>
+          <circle class="fur" cx="27" cy="26" r="14"/>
+          <path class="stripe" d="M24 13.5 v4.5 M29.5 13.5 v4.5"/>
+          <g class="cat-eyes"><ellipse cx="21" cy="24" rx="2" ry="2.8"/><ellipse cx="31" cy="24" rx="2" ry="2.8"/></g>
+          <polygon class="nose" points="13.5,29 17.5,29 15.5,31.5"/>
+          <ellipse class="cat-tongue" cx="15.5" cy="35.5" rx="2.8" ry="4.2"/>
+          <path class="whisker" d="M16 31 L2 28 M16 32.5 L1 33.5"/>
+          <path class="whisker whisker-back" d="M34 31 L46 29 M34 32.5 L46 34"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+</div>
+</div>
+<script src="{{ url_for('static', filename='cat.js') }}" defer></script>
 </body>
 </html>

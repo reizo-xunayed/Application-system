@@ -22,7 +22,7 @@
 
 <div class="grid">
   {% for key, label in STAGES.items() %}
-  <div class="stat"><a href="{{ url_for('main.companies', stage=key) }}"><div class="n">{{ counts[key] }}</div><div class="l">{{ label }}</div></a></div>
+  <div class="stat {{ key }}"><a href="{{ url_for('main.companies', stage=key) }}"><div class="n">{{ counts[key] }}</div><div class="l">{{ label }}</div></a></div>
   {% endfor %}
 </div>
 
