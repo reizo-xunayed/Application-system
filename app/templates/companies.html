@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>2. Companies</h1>
+<p class="lead">{{ total }} companies{% if args.stage %} in “{{ STAGES[args.stage] }}”{% endif %}. Bavaria first.</p>
+
+<form method="get" class="row panel">
+  <input type="text" name="q" value="{{ args.q or '' }}" placeholder="Search name, city or email" style="max-width:260px">
+  <select name="stage" style="max-width:200px">
+    <option value="">All stages</option>
+    {% for key, label in STAGES.items() %}<option value="{{ key }}" {{ 'selected' if args.stage == key }}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="occupation" style="max-width:260px">
+    <option value="">All occupations</option>
+    {% for o in occupations %}<option value="{{ o.key }}" {{ 'selected' if args.occupation == o.key }}>{{ o.label }}</option>{% endfor %}
+  </select>
+  <button class="secondary">Filter</button>
+</form>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Company</th><th>Place</th><th>Ausbildung</th><th>Contact</th><th>Stage</th><th>Sent</th></tr>
+  {% for c in rows %}
+    {% set st = stage_of(c) %}
+    <tr>
+      <td><a href="{{ url_for('main.company', company_id=c.id) }}">{{ c.name }}</a>{% if c.priority == 1 %} <span class="chip">Bavaria</span>{% endif %}</td>
+      <td>{{ c.city or '' }}</td>
+      <td class="small">
+        {% for key in (c.occupation_keys or '').split(',') if key %}{{ OCCUPATIONS_BY_KEY[key].label.split(' (')[0] if key in OCCUPATIONS_BY_KEY else key }}{% if not loop.last %}, {% endif %}{% endfor %}
+        {% if c.listing_count > 1 %}<span class="muted">({{ c.listing_count }} listings)</span>{% endif %}
+      </td>
+      <td class="small">{{ c.email or '' }}{% if not c.email and c.lookup_note %}<span class="muted">{{ c.lookup_note }}</span>{% endif %}</td>
+      <td><span class="chip {{ st }}">{{ STAGES[st] }}</span>{% if c.auto_reply_at and not c.replied_at %} <span class="chip" title="Automatic answer (out of office / receipt)">auto-answer</span>{% endif %}</td>
+      <td class="small">{{ c.sent_at|days_ago }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="muted">Nothing here yet. <a href="{{ url_for('main.search') }}">Find companies</a> first.</td></tr>
+  {% endfor %}
+</table>
+</div>
+
+{% if pages > 1 %}
+<p class="row">
+  {% for p in range(1, pages + 1) %}
+    {% if p == page %}<strong>{{ p }}</strong>{% else %}<a href="{{ url_for('main.companies', page=p, stage=args.stage, occupation=args.occupation, q=args.q) }}">{{ p }}</a>{% endif %}
+  {% endfor %}
+</p>
+{% endif %}
+{% endblock %}

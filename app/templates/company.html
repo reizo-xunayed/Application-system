@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="small"><a href="{{ url_for('main.companies') }}">← All companies</a></p>
+<h1>{{ c.name }}</h1>
+<p class="lead">
+  <span class="chip {{ stage }}">{{ STAGES[stage] }}</span>
+  {{ c.street or '' }} {{ c.plz or '' }} {{ c.city or '' }}
+  {% if c.website %} · <a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a>{% endif %}
+</p>
+
+{% if c.replied_at %}
+<div class="flash ok">💬 Replied {{ c.replied_at|localtime }} from {{ c.reply_from }}: “{{ c.reply_snippet }}” — open Gmail to read and answer.</div>
+{% endif %}
+{% if c.bounced_at %}
+<div class="flash error">The email to {{ c.email }} bounced (the address doesn't exist). Pick another address below to send again.</div>
+{% endif %}
+{% if c.auto_reply_at and not c.replied_at %}
+<div class="flash ok">🤖 Automatic answer received {{ c.auto_reply_at|localtime }} (out-of-office or receipt). This doesn't count as a reply.</div>
+{% endif %}
+
+<div class="cols">
+  <div class="panel">
+    <h3>Contact</h3>
+    <p class="small muted">{{ c.lookup_note or 'Not searched yet.' }}{% if c.looked_up_at %} ({{ c.looked_up_at|localtime }}){% endif %}{% if c.website_source %} · website: {{ c.website_source }}{% endif %}</p>
+    {% if candidates %}
+      <table>
+        <tr><th>Email found</th><th>Score</th><th></th></tr>
+        {% for cand in candidates %}
+        <tr>
+          <td>{{ cand.email }}<br><span class="small muted">{{ cand.source_url }}</span></td>
+          <td>{{ cand.score }}</td>
+          <td>
+            {% if cand.email == c.email %}<span class="chip ready">selected</span>{% else %}
+            <form method="post" action="{{ url_for('main.choose_email', company_id=c.id) }}" class="inline">
+              <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="email" value="{{ cand.email }}">
+              <button class="secondary">Use this</button>
+            </form>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+    <form method="post" action="{{ url_for('main.lookup_one', company_id=c.id) }}" style="margin-top:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="secondary">{{ 'Search again' if c.looked_up_at else 'Find contact now' }}</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Details</h3>
+    <form method="post" action="{{ url_for('main.update_company', company_id=c.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>Website</label><input type="text" name="website" value="{{ c.website or '' }}">
+      <label>Send to</label><input type="email" name="email" value="{{ c.email or '' }}">
+      <label>Result</label>
+      <select name="outcome">
+        <option value="">— no decision yet —</option>
+        <option value="positive" {{ 'selected' if c.outcome == 'positive' }}>Positive (interview / offer)</option>
+        <option value="rejected" {{ 'selected' if c.outcome == 'rejected' }}>Rejected</option>
+      </select>
+      <label>Notes</label><textarea name="notes">{{ c.notes or '' }}</textarea>
+      <label class="check"><input type="checkbox" name="excluded" value="1" {{ 'checked' if c.excluded }}> Skip this company (never email it)</label>
+      <p><button>Save</button></p>
+    </form>
+  </div>
+</div>
+
+<h2>Ausbildung listings</h2>
+<div class="table-wrap">
+<table>
+  <tr><th>Title</th><th>Occupation</th><th>Place</th><th>Start</th><th>Listing</th></tr>
+  {% for l in listings %}
+  <tr>
+    <td>{{ l.title }}</td>
+    <td class="small">{{ readable(l.occupation) }}</td>
+    <td>{{ l.plz or '' }} {{ l.city or '' }}</td>
+    <td>{{ l.start_date or '' }}</td>
+    <td class="small"><a href="https://www.arbeitsagentur.de/jobsuche/jobdetail/{{ l.refnr }}" target="_blank" rel="noopener">view</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="muted">Added by hand, no listings.</td></tr>
+  {% endfor %}
+</table>
+</div>
+
+<h2 id="email">{{ 'Emails sent' if emails else 'Email that will be sent' }}</h2>
+{% for e in emails %}
+<div class="panel">
+  <p class="small muted">{{ 'Follow-up' if e.kind == 'followup' else 'First email' }} · {{ e.sent_at|localtime }} · to {{ e.to_addr }}</p>
+  <h3>{{ e.subject }}</h3>
+  <div class="preview">{{ e.body }}</div>
+</div>
+{% endfor %}
+{% if opens %}
+<div class="panel">
+  <h3>Opens</h3>
+  <ul class="small">
+    {% for o in opens %}<li>{{ o.opened_at|localtime }} ({{ 'follow-up' if o.kind == 'followup' else 'first email' }}){% if o.likely_automatic %} <span class="muted">— right after sending, probably a mail scanner, ignored</span>{% endif %}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if stage == 'ready' or stage == 'no_contact' or stage == 'new' %}
+<form method="post" action="{{ url_for('main.save_draft', company_id=c.id) }}" class="panel">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <p class="small muted">{{ 'Custom email for this company.' if customized else 'Filled in from your template. Edit here to change it for this company only.' }}</p>
+  <label>Subject</label><input type="text" name="subject" value="{{ subject }}">
+  <label>Text</label><textarea name="body" class="tall">{{ body }}</textarea>
+  <p class="row">
+    <button>Save for this company</button>
+    {% if customized %}<button name="reset" value="1" class="secondary">Back to template</button>{% endif %}
+  </p>
+</form>
+{% endif %}
+{% endblock %}

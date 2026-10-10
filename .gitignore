@@ -1,0 +1,12 @@
+# Personal data: database, Google sign-in token, CV/attachments. Never commit.
+data/
+.env
+
+# Local tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+.wrangler/
+.DS_Store

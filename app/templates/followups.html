@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>4. Follow-ups</h1>
+<p class="lead">Companies that haven't replied {{ days }} days after your first email. A follow-up goes out as a reply in the same email thread. Each company gets one follow-up at most.</p>
+
+{% if not settings.followup_body_template %}<div class="flash error">Write your follow-up text in <a href="{{ url_for('main.settings') }}#followup">Settings</a> first.</div>{% endif %}
+{% if not connected %}<div class="flash error">Gmail isn't connected. <a href="{{ url_for('main.settings') }}#gmail">Connect it in Settings</a>.</div>{% endif %}
+
+{% if previews %}
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <p class="row">
+    <button {{ 'disabled' if not connected or not budget or not settings.followup_body_template }}>Send selected follow-ups</button>
+    <span class="small muted">{{ budget }} more emails allowed today.</span>
+  </p>
+  {% for p in previews %}
+  <div class="panel">
+    <label class="check">
+      <input type="checkbox" name="ids" value="{{ p.c.id }}" {{ 'checked' if loop.index <= budget }}>
+      <strong>{{ p.c.name }}</strong> → {{ p.c.email }}
+      <span class="small muted">first email {{ p.c.sent_at|days_ago }}{% if p.c.first_open %}, opened {{ p.c.first_open|localtime }}{% else %}, not opened{% endif %}</span>
+    </label>
+    <details><summary class="small">Preview</summary><div class="preview">{{ p.body }}</div></details>
+  </div>
+  {% endfor %}
+</form>
+{% else %}
+<div class="panel muted">No follow-ups due. 🎉</div>
+{% endif %}
+{% endblock %}

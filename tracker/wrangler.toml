@@ -1,0 +1,10 @@
+name = "mail-open-tracker"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+# Create the storage once with:  npx wrangler kv namespace create OPENS
+# then paste the id it prints below.
+[[kv_namespaces]]
+binding = "OPENS"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"

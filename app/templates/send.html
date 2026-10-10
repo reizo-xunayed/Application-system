@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>3. Review &amp; send</h1>
+<p class="lead">{{ total }} companies have a contact and haven't been emailed yet. Check the emails, untick any you don't want, then send.</p>
+
+{% if not connected %}<div class="flash error">Gmail isn't connected yet. <a href="{{ url_for('main.settings') }}#gmail">Connect it in Settings</a>.</div>{% endif %}
+{% if not settings.subject_template or not settings.body_template %}<div class="flash error">You haven't written your email yet. <a href="{{ url_for('main.settings') }}#template">Write it in Settings</a>.</div>{% endif %}
+<p class="small muted">
+  You can send {{ budget }} more today (daily limit {{ settings.daily_limit }}).
+  Open tracking: {{ 'on' if tracker else 'off' }}.
+  Attachments: {{ attachments|map(attribute='name')|join(', ') if attachments else 'none' }}.
+</p>
+
+{% if previews %}
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <p class="row">
+    <button {{ 'disabled' if not connected or not budget }}>Send selected</button>
+    <span class="small muted">Emails go out one by one, 8–20 seconds apart.</span>
+  </p>
+  {% for p in previews %}
+  <div class="panel">
+    <label class="check">
+      <input type="checkbox" name="ids" value="{{ p.c.id }}" {{ 'checked' if loop.index <= budget }}>
+      <strong>{{ p.c.name }}</strong> → {{ p.c.email }}
+      {% if p.customized %}<span class="chip">custom</span>{% endif %}
+      {% if p.c.priority == 1 %}<span class="chip">Bavaria</span>{% endif %}
+    </label>
+    <details>
+      <summary class="small">{{ p.subject }}</summary>
+      <div class="preview">{{ p.body }}</div>
+      <p class="small"><a href="{{ url_for('main.company', company_id=p.c.id) }}#email">Edit for this company</a></p>
+    </details>
+  </div>
+  {% endfor %}
+  {% if total > previews|length %}<p class="muted small">Showing the first {{ previews|length }}; the rest appear after these are sent.</p>{% endif %}
+</form>
+{% else %}
+<div class="panel muted">Nothing ready. <a href="{{ url_for('main.dashboard') }}">Find contacts</a> for more companies first.</div>
+{% endif %}
+{% endblock %}

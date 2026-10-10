@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>1. Find companies</h1>
+<p class="lead">Searches the official Arbeitsagentur job board for Ausbildung listings. Every company that posts one already trains apprentices, so it's a good company to write to directly. You won't apply through the listing.</p>
+
+<form method="post" class="panel">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="cols">
+    <div>
+      <h3>Occupations</h3>
+      {% for o in occupations %}
+        <label class="check"><input type="checkbox" name="occupations" value="{{ o.key }}" checked> {{ o.label }}</label>
+      {% endfor %}
+      <p class="small muted">Car repair listings (Kfz, Autohaus, Karosserie…) are filtered out of Mechatroniker results.</p>
+    </div>
+    <div>
+      <h3>Places</h3>
+      {% for p in places %}
+        <label class="check"><input type="checkbox" name="places" value="{{ p.key }}" checked> {{ p.label }}{% if p.whole_state %} <span class="chip">first priority</span>{% endif %}</label>
+      {% endfor %}
+      <label for="radius">Radius around each city (km)</label>
+      <input type="number" id="radius" name="radius" value="30" min="5" max="200">
+      <p class="small muted">Companies in Bavaria are always listed first.</p>
+    </div>
+  </div>
+  <p><button>Search</button> <span class="small muted">Takes about 1–2 minutes. Running it again only adds new companies.</span></p>
+</form>
+
+<div class="panel">
+  <h3>Add a company yourself</h3>
+  <form method="post" action="{{ url_for('main.add_company') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="cols">
+      <div><label>Company name</label><input type="text" name="name" required></div>
+      <div><label>City</label><input type="text" name="city"></div>
+      <div><label>Website (optional)</label><input type="text" name="website" placeholder="www.firma.de"></div>
+      <div><label>Email (optional)</label><input type="email" name="email"></div>
+    </div>
+    <p><button class="secondary">Add</button></p>
+  </form>
+</div>
+{% endblock %}

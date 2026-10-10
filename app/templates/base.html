@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Ausbildung Outreach{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header>
+  <div class="brand">Ausbildung Outreach</div>
+  <nav>
+    {% set ep = request.endpoint or '' %}
+    <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if ep == 'main.dashboard' }}">Dashboard</a>
+    <a href="{{ url_for('main.search') }}" class="{{ 'active' if ep == 'main.search' }}">1. Find companies</a>
+    <a href="{{ url_for('main.companies') }}" class="{{ 'active' if ep in ('main.companies', 'main.company') }}">2. Companies</a>
+    <a href="{{ url_for('main.send') }}" class="{{ 'active' if ep == 'main.send' }}">3. Review &amp; send</a>
+    <a href="{{ url_for('main.followups') }}" class="{{ 'active' if ep == 'main.followups' }}">4. Follow-ups</a>
+    <a href="{{ url_for('main.settings') }}" class="{{ 'active' if ep == 'main.settings' }}">Settings</a>
+  </nav>
+</header>
+<main>
+  {% if active_job and request.endpoint != 'main.job' %}
+    <div class="banner">⏳ {{ active_job.title }} is running in the background ({{ active_job.done }}/{{ active_job.total or '?' }}). <a href="{{ url_for('main.job', job_id=active_job.id) }}">Watch progress</a></div>
+  {% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

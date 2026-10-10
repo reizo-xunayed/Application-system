@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Settings</h1>
+
+<div class="panel" id="gmail">
+  <h3>Gmail</h3>
+  {% if connected %}
+    <p class="done">✓ Connected as <strong>{{ address }}</strong>. You won't have to sign in again.</p>
+    <form method="post" action="{{ url_for('main.gmail_disconnect') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="danger">Disconnect</button>
+    </form>
+  {% elif client_present %}
+    <p>Click below. Google's sign-in page opens in a new tab. Choose your account, accept the “unverified app” warning (it's your own app), and allow sending and reading.</p>
+    <form method="post" action="{{ url_for('main.gmail_connect') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button>Sign in with Google</button>
+    </form>
+  {% else %}
+    <p class="todo">One-time setup needed: create the Google “OAuth client” as described in the README (step 3), download its JSON file, and save it as <code>{{ data_dir }}/google_client_secret.json</code>. Then reload this page.</p>
+  {% endif %}
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="panel" id="template">
+    <h3>Your email</h3>
+    <p class="small muted">Write it once. These blanks are filled in for each company:
+      {% for p in placeholders %}<code>{{ '{' ~ p ~ '}' }}</code> {% endfor %}
+      (company name, Ausbildung occupation from their listing, city).</p>
+    <label>Your name (shown as sender)</label>
+    <input type="text" name="sender_name" value="{{ s.sender_name }}">
+    <label>Subject</label>
+    <input type="text" name="subject_template" value="{{ s.subject_template }}" placeholder="Initiativanfrage: Ausbildung als {beruf} bei {firma}">
+    <label>Text</label>
+    <textarea name="body_template" class="tall" placeholder="Sehr geehrte Damen und Herren,&#10;&#10;… {firma} … {beruf} … {stadt} …">{{ s.body_template }}</textarea>
+  </div>
+
+  <div class="panel" id="followup">
+    <h3>Follow-up</h3>
+    <label>Send a follow-up reminder after (days without reply)</label>
+    <input type="number" name="followup_days" value="{{ s.followup_days }}" min="1" max="60">
+    <label>Follow-up text (sent as a reply in the same thread; blanks work here too)</label>
+    <textarea name="followup_body_template">{{ s.followup_body_template }}</textarea>
+  </div>
+
+  <div class="panel">
+    <h3>Sending</h3>
+    <label>Maximum emails per day</label>
+    <input type="number" name="daily_limit" value="{{ s.daily_limit }}" min="1" max="100">
+    <p class="small muted">10–20 a day keeps your Gmail account from being flagged as a spammer.</p>
+    <label class="check"><input type="checkbox" name="attach_files" value="1" {{ 'checked' if s.attach_files == '1' }}> Attach every file in the attachments folder to first emails</label>
+    <p class="small muted">Folder: <code>{{ attachments_dir }}</code> — currently {{ attachments|map(attribute='name')|join(', ') if attachments else 'empty' }}. Put your Lebenslauf and certificates (PDF) there when they're ready.</p>
+  </div>
+  <p><button>Save settings</button></p>
+</form>
+
+<div class="panel" id="tracking">
+  <h3>Open tracking</h3>
+  {% if tracker_configured %}
+    <p>Tracker: <code>{{ tracker_url }}</code></p>
+    <form method="post" action="{{ url_for('main.tracker_test') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="secondary">Test connection</button>
+    </form>
+  {% else %}
+    <p class="todo">Off. Set up the free Cloudflare tracker (README, step 4), then put <code>TRACKER_URL</code> and <code>TRACKER_SECRET</code> in the <code>.env</code> file and restart the app.</p>
+  {% endif %}
+  <p class="small muted">Open tracking is approximate: Apple Mail can report opens that didn't happen, Outlook often blocks the image so real opens are missed, and if you look at a sent email in your own Gmail “Sent” folder, it counts as an open.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block head %}{% if job.running %}<meta http-equiv="refresh" content="2">{% endif %}{% endblock %}
+{% block content %}
+<h1>{{ job.title }}</h1>
+<p class="lead">
+  {% if job.running %}⏳ Running… this page updates itself. You can leave it and come back.{% elif job.state == 'done' %}✓ Finished.{% else %}❌ Stopped with an error: {{ job.error }}{% endif %}
+</p>
+{% if job.total %}<p><progress value="{{ job.done }}" max="{{ job.total }}"></progress> <span class="small muted">{{ job.done }} / {{ job.total }}</span></p>{% endif %}
+<div class="log">{% for line in job.lines %}{{ line }}
+{% else %}Starting…{% endfor %}</div>
+{% if not job.running %}
+<p class="row" style="margin-top:14px">
+  {% if job.kind == 'search' %}<a class="button" href="{{ url_for('main.companies') }}">See companies</a>{% endif %}
+  {% if job.kind == 'lookup' %}<a class="button" href="{{ url_for('main.send') }}">Review &amp; send</a>{% endif %}
+  {% if job.kind == 'gmail' %}<a class="button" href="{{ url_for('main.settings') }}">Back to settings</a>{% endif %}
+  <a class="button secondary" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+</p>
+{% endif %}
+{% endblock %}

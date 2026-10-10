@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block head %}{% if counts.sent or counts.opened %}<meta http-equiv="refresh" content="600">{% endif %}{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="lead">Find companies that train apprentices, reach their HR team directly, and keep track of who answered.</p>
+
+{% if not (setup.template and setup.gmail and setup.companies) %}
+<div class="panel">
+  <h3>Getting started</h3>
+  <ol class="checklist">
+    <li class="{{ 'done' if setup.template else 'todo' }}">{{ '✓' if setup.template else '○' }} Write your email once in <a href="{{ url_for('main.settings') }}#template">Settings</a> (use {firma}, {beruf}, {stadt} as blanks).</li>
+    <li class="{{ 'done' if setup.gmail else 'todo' }}">{{ '✓' if setup.gmail else '○' }} Connect Gmail in <a href="{{ url_for('main.settings') }}#gmail">Settings</a>.</li>
+    <li class="{{ 'done' if setup.tracker else 'todo' }}">{{ '✓' if setup.tracker else '○' }} Optional: set up open tracking (see README).</li>
+    <li class="{{ 'done' if setup.companies else 'todo' }}">{{ '✓' if setup.companies else '○' }} <a href="{{ url_for('main.search') }}">Find companies</a>, then let the app find their HR emails.</li>
+  </ol>
+</div>
+{% endif %}
+
+{% if due %}
+<div class="banner">🔔 {{ due }} {{ 'company has' if due == 1 else 'companies have' }} not replied in {{ days }} days. <a href="{{ url_for('main.followups') }}">Send follow-ups</a></div>
+{% endif %}
+
+<div class="grid">
+  {% for key, label in STAGES.items() %}
+  <div class="stat"><a href="{{ url_for('main.companies', stage=key) }}"><div class="n">{{ counts[key] }}</div><div class="l">{{ label }}</div></a></div>
+  {% endfor %}
+</div>
+
+<div class="cols" style="margin-top:16px">
+  <div class="panel">
+    <h3>Next steps</h3>
+    {% if counts.new %}
+      <p>{{ counts.new }} companies have no contact search yet.</p>
+      <form method="post" action="{{ url_for('main.lookup_many') }}" class="row">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <span>Find HR emails for the next</span>
+        <input type="number" name="limit" value="30" min="1" max="500">
+        <span>companies</span>
+        <button>Find contacts</button>
+      </form>
+      <p class="small muted">Takes about 15–40 seconds per company. Bavaria goes first.</p>
+    {% elif counts.no_contact %}
+      <form method="post" action="{{ url_for('main.lookup_many') }}" class="row">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="retry" value="1">
+        <input type="hidden" name="limit" value="50">
+        <span>{{ counts.no_contact }} companies have no contact yet.</span>
+        <button class="secondary">Try them again</button>
+      </form>
+    {% endif %}
+    {% if counts.ready %}
+      <p><a class="button" href="{{ url_for('main.send') }}">Review &amp; send {{ counts.ready }} emails</a></p>
+    {% endif %}
+    <p class="muted small">Sent today: {{ today }} of {{ settings.daily_limit }} (daily limit).</p>
+  </div>
+  <div class="panel">
+    <h3>Replies &amp; opens</h3>
+    <p class="small muted">Last checked: {{ settings.last_sync|localtime or 'never' }}. The app checks again automatically every 30 minutes while the dashboard is open.</p>
+    <form method="post" action="{{ url_for('main.sync') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="secondary">Check now</button>
+    </form>
+    {% if jobs %}
+      <h3 style="margin-top:14px">Recent activity</h3>
+      <ul class="small">
+        {% for j in jobs %}
+          <li><a href="{{ url_for('main.job', job_id=j.id) }}">{{ j.title }}</a> — {{ j.state }}{% if j.finished %} at {{ j.finished.strftime('%H:%M') }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
